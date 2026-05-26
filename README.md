@@ -1,91 +1,151 @@
-# Legacy Migration Agent API
+# Legacy Application Modernization & Migration Agent
 
-Accepts legacy code snippets (VB6 / Classic ASP / COBOL / JavaEE), analyses them with GPT-4o via LangChain, assesses migration risk with rule-based logic, generates modernised code, and returns structured migration reports.
+A REST API that accepts legacy code snippets — VB6, Classic ASP, COBOL, and JavaEE — and produces structured migration reports. It analyses each snippet using GPT-4o via LangChain to identify anti-patterns and architectural concerns, assesses migration risk through rule-based regex logic (no LLM involved in risk scoring), generates modernised equivalent code in a target framework of your choice, and builds an actionable migration checklist. The result is a complete, machine-readable report that gives engineering teams a clear starting point for modernisation work.
 
-## Architecture
+## Features
 
-```
-POST /analyze
-  → LangChain + GPT-4o (analysis)
-  → Rule-based regex (risk assessment)
-  → In-memory storage
+- Accepts snippets in VB6, Classic ASP, COBOL, and JavaEE
+- Detects anti-patterns including hardcoded credentials, raw SQL, missing error handling, and legacy coupling
+- Assigns risk levels (CRITICAL / HIGH / MEDIUM / LOW) using deterministic regex rules — no LLM for risk
+- Generates modernised code in a configurable target framework via GPT-4o
+- Produces a migration checklist alongside the generated code
+- Returns a combined structured report per snippet
+- Swagger UI available at `/docs` for interactive exploration
 
-POST /migrate/{id}
-  → LangChain + GPT-4o (code generation)
-  → Rule-based checklist builder
-  → In-memory storage (update)
+## Prerequisites
 
-GET /report/{id}   → merge stored analysis + migration
-GET /patterns      → static catalogue (no LLM)
-```
+**Docker (recommended)**
+- Docker
+- docker-compose
 
-## Quick Start (Docker — recommended)
+**Local**
+- Python 3.12
+- [uv](https://github.com/astral-sh/uv)
 
-```bash
-cp .env.example .env
-# Edit .env and set your OPENAI_API_KEY
+## Setup
 
-docker-compose up --build
-```
-
-API is live at http://localhost:8000  
-Swagger UI: http://localhost:8000/docs
-
-## Quick Start (local with uv)
+### Docker (recommended)
 
 ```bash
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY
+# Open .env and set OPENAI_API_KEY
+docker compose up --build
+```
 
+The API will be available at `http://localhost:8000`.
+
+### Local with uv
+
+```bash
+cp .env.example .env
+# Open .env and set OPENAI_API_KEY
 uv sync
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload
 ```
+
+The API will be available at `http://localhost:8000`.
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `OPENAI_API_KEY` | Yes | — | OpenAI API key |
-| `LLM_MODEL` | No | `gpt-4o` | OpenAI model name |
-| `TARGET_FRAMEWORK` | No | `python_fastapi` | Fallback target framework |
+| `OPENAI_API_KEY` | Yes | — | OpenAI API key used by LangChain |
+| `LLM_MODEL` | No | `gpt-4o` | OpenAI model name passed to LangChain |
+| `TARGET_FRAMEWORK` | No | `python_fastapi` | Default target framework when none is specified in the request |
 
-Supported frameworks: `python_fastapi`, `dotnet8`, `nodejs_express`, `java_springboot`
+## API Reference
 
-## Sample curl Requests
+Swagger UI with full request/response schemas is available at `http://localhost:8000/docs`.
 
-### Analyse a VB6 snippet
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/analyze?target_framework=<fw>` | Analyse a legacy snippet; returns detected patterns and risk level |
+| `POST` | `/migrate/{snippet_id}` | Generate modernised code and migration checklist for an analysed snippet |
+| `GET` | `/report/{snippet_id}` | Retrieve the full combined report (analysis + migration) for a snippet |
+| `GET` | `/patterns` | List all detectable anti-patterns and their descriptions |
+
+## Example Walkthrough
+
+The following three steps take a VB6 loan-processing snippet from raw legacy code to a full migration report.
+
+### Step 1 — Analyse the snippet
 
 ```bash
-curl -X POST "http://localhost:8000/analyze" \
+curl -X POST "http://localhost:8000/analyze?target_framework=python_fastapi" \
   -H "Content-Type: application/json" \
   -d '{
     "language": "VB6",
-    "code_snippet": "conn.Open \"Provider=SQLOLEDB;Server=192.168.1.10;Database=LoanDB;UID=sa;PWD=Admin123\"\nrs.Open \"SELECT * FROM Loans WHERE Status = '"'"'PENDING'"'"'\", conn",
+    "code_snippet": "Dim conn As New ADODB.Connection\nconn.Open \"Provider=SQLOLEDB;Server=192.168.1.10;Database=LoanDB;UID=sa;PWD=Admin123\"\nDim rs As New ADODB.Recordset\nrs.Open \"SELECT * FROM Loans WHERE Status = '\''PENDING'\''\", conn\nDo While Not rs.EOF\n  If rs(\"Amount\") > 50000 Then\n    rs(\"Status\") = \"HIGH_RISK\"\n    rs.Update\n  End If\n  rs.MoveNext\nLoop",
     "module_name": "LoanProcessor",
-    "description": "Legacy loan processing module"
+    "description": "Legacy VB6 loan processing module"
   }'
 ```
 
-### Generate modernised code
+The response includes a `snippet_id`, detected patterns (hardcoded credentials, raw SQL), and a risk level. Because this snippet contains hardcoded credentials, the risk level will be `CRITICAL` and migration status `BLOCKED`.
+
+### Step 2 — Generate modernised code
+
+Replace `<snippet_id>` with the value returned in Step 1.
 
 ```bash
-curl -X POST "http://localhost:8000/migrate/{snippet_id}?target_framework=python_fastapi"
+curl -X POST "http://localhost:8000/migrate/<snippet_id>"
 ```
 
-### Get full report
+The response contains the modernised FastAPI equivalent of the snippet and a migration checklist of steps required before the code is production-ready.
+
+### Step 3 — Retrieve the full report
 
 ```bash
-curl http://localhost:8000/report/{snippet_id}
+curl "http://localhost:8000/report/<snippet_id>"
 ```
 
-### List anti-patterns
+The response merges the analysis from Step 1 and the migration output from Step 2 into a single structured report.
 
-```bash
-curl http://localhost:8000/patterns
-```
+## Risk Levels
+
+Risk is assessed by deterministic regex rules. No LLM is involved in this step.
+
+| Risk Level | Trigger |
+|---|---|
+| `CRITICAL` | Hardcoded credentials or connection strings |
+| `HIGH` | Raw SQL without ORM or parameterisation |
+| `MEDIUM` | Missing error handling (`On Error Resume Next`, empty catch blocks) |
+| `LOW` | Simple logic with no external dependencies |
+
+Migration status is derived from risk level:
+
+| Risk Level | Migration Status |
+|---|---|
+| `CRITICAL` | `BLOCKED` |
+| `HIGH` / `MEDIUM` | `NEEDS_REVIEW` |
+| `LOW` | `READY` |
 
 ## Running Tests
 
+No API key is required. The LLM is mocked in the test suite.
+
 ```bash
-uv run pytest tests/ -v
+uv run --with pytest pytest tests/ -v
 ```
+
+## Project Structure
+
+```
+app/
+├── main.py          # FastAPI application entry point and route definitions
+├── models.py        # Pydantic v2 request and response schemas
+├── analyzer.py      # LangChain + GPT-4o analysis chain
+├── risk.py          # Rule-based regex risk assessment (no LLM)
+├── migrator.py      # LangChain + GPT-4o code generation and checklist builder
+├── storage.py       # In-memory snippet store
+└── patterns.py      # Static catalogue of detectable anti-patterns
+```
+
+## Supported Target Frameworks
+
+| Value | Description |
+|---|---|
+| `python_fastapi` | Python 3.12 with FastAPI and SQLAlchemy |
+| `dotnet8` | C# with ASP.NET Core 8 and Entity Framework |
+| `nodejs_express` | Node.js with Express and Prisma |
+| `java_springboot` | Java 21 with Spring Boot 3 and JPA |
