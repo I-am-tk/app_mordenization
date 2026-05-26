@@ -27,4 +27,12 @@ ANTI_PATTERNS = [
         "name": "DEAD_CODE",
         "description": "Unreachable or never-called code blocks that add noise and maintenance burden.",
     },
+    {
+        "name": "NO_INPUT_VALIDATION",
+        "description": "User-supplied input accepted and used without any type checking, range validation, or sanitisation.",
+    },
+    {
+        "name": "SILENT_ERROR_SUPPRESSION",
+        "description": "Errors are caught and silently discarded (e.g. On Error Resume Next, empty Err handler) hiding failures from callers.",
+    },
 ]
