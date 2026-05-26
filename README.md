@@ -1,6 +1,6 @@
 # Legacy Application Modernization & Migration Agent
 
-A REST API that accepts legacy code snippets — VB6, Classic ASP, COBOL, and JavaEE — and produces structured migration reports. It analyses each snippet using GPT-4o via LangChain to identify anti-patterns and architectural concerns, assesses migration risk through rule-based regex logic (no LLM involved in risk scoring), generates modernised equivalent code in a target framework of your choice, and builds an actionable migration checklist. The result is a complete, machine-readable report that gives engineering teams a clear starting point for modernisation work.
+A REST API and browser-based UI that accepts legacy code snippets — VB6, Classic ASP, COBOL, and JavaEE — and produces structured migration reports. It analyses each snippet using GPT-4o via LangChain to identify anti-patterns and architectural concerns, assesses migration risk through rule-based regex logic (no LLM involved in risk scoring), generates modernised equivalent code in a target framework of your choice, and builds an actionable migration checklist. The result is a complete, machine-readable report that gives engineering teams a clear starting point for modernisation work. A built-in browser UI makes it easy to explore the tool without writing any API calls.
 
 ## Features
 
@@ -44,6 +44,20 @@ uv run uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`.
+
+## Browser UI
+
+A built-in web interface is available — no extra setup needed.
+
+Open **http://localhost:8000/ui** after starting the server.
+
+**How to use:**
+1. Select the legacy language (VB6, Classic ASP, JavaEE, COBOL) and enter a module name
+2. Paste the legacy code snippet and click **Analyze Code**
+3. Review the risk level, detected anti-patterns, complexity score, and GPT-4o summary
+4. Click **Generate Migration** to get modernised code with inline comments and an actionable checklist
+
+The Swagger UI (interactive API docs) is also available at http://localhost:8000/docs.
 
 ## Environment Variables
 
@@ -127,6 +141,34 @@ No API key is required. The LLM is mocked in the test suite.
 ```bash
 uv run --with pytest pytest tests/ -v
 ```
+
+## Quick Test Example
+
+Paste this VB6 snippet into the UI to see a full CRITICAL-risk analysis and migration:
+
+**Settings:** Language = VB6 · Module Name = `LoanProcessor` · Framework = Python FastAPI
+
+**Code:**
+```vb
+'VB6 - Legacy Loan Processing Module
+Dim conn As New ADODB.Connection
+conn.Open "Provider=SQLOLEDB;Server=192.168.1.10;Database=LoanDB;UID=sa;PWD=Admin123"
+Dim rs As New ADODB.Recordset
+rs.Open "SELECT * FROM Loans WHERE Status = 'PENDING'", conn
+Do While Not rs.EOF
+  If rs("Amount") > 50000 Then
+    rs("Status") = "HIGH_RISK"
+    rs.Update
+  End If
+  rs.MoveNext
+Loop
+```
+
+**Expected results:**
+- Risk level: **CRITICAL** (hardcoded credentials + raw SQL detected)
+- Patterns: `HARDCODED_CONFIG`, `RAW_SQL`, `NO_ERROR_HANDLING`
+- Migration status: **BLOCKED**
+- Modernised output: FastAPI + SQLAlchemy with environment-variable config and parameterised queries
 
 ## Project Structure
 
