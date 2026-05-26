@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
@@ -51,6 +52,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+
+@app.get("/ui", include_in_schema=False)
+async def serve_ui():
+    from fastapi.responses import FileResponse
+    return FileResponse("app/static/index.html")
 
 _RISK_TO_STATUS: dict[str, MigrationStatus] = {
     "CRITICAL": MigrationStatus.BLOCKED,

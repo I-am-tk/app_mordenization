@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legacy Migration Agent</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Legacy Migration Agent</h1>
+    <p>Analyse legacy code and generate modernised equivalents using GPT-4o</p>
+  </header>
+
+  <main>
+    <!-- Input panel -->
+    <section id="input-panel">
+      <h2>1. Analyse Code</h2>
+      <div class="form-row">
+        <label>Language
+          <select id="language">
+            <option value="VB6">VB6</option>
+            <option value="ClassicASP">Classic ASP</option>
+            <option value="JavaEE">JavaEE</option>
+            <option value="COBOL">COBOL</option>
+          </select>
+        </label>
+        <label>Module Name
+          <input type="text" id="module-name" placeholder="e.g. LoanProcessor">
+        </label>
+        <label>Target Framework
+          <select id="target-framework">
+            <option value="python_fastapi">Python FastAPI</option>
+            <option value="dotnet8">.NET 8</option>
+            <option value="nodejs_express">Node.js Express</option>
+            <option value="java_springboot">Java Spring Boot</option>
+          </select>
+        </label>
+      </div>
+      <label>Description (optional)
+        <input type="text" id="description" placeholder="Brief description of what this module does">
+      </label>
+      <label>Code Snippet
+        <textarea id="code-snippet" rows="12" placeholder="Paste your legacy code here..."></textarea>
+      </label>
+      <button id="analyze-btn" onclick="analyzeCode()">Analyze Code</button>
+    </section>
+
+    <!-- Analysis result panel (hidden until response) -->
+    <section id="analysis-panel" class="hidden">
+      <h2>2. Analysis Results</h2>
+      <div class="result-grid">
+        <div class="card">
+          <h3>Risk Level</h3>
+          <span id="risk-badge" class="badge"></span>
+          <ul id="risk-reasons"></ul>
+        </div>
+        <div class="card">
+          <h3>Complexity Score</h3>
+          <span id="complexity-score" class="score"></span><span>/10</span>
+        </div>
+        <div class="card">
+          <h3>Detected Patterns</h3>
+          <div id="patterns-list"></div>
+        </div>
+      </div>
+      <div class="card full-width">
+        <h3>Summary</h3>
+        <p id="summary-text"></p>
+      </div>
+      <button id="migrate-btn" onclick="migrateCode()">Generate Migration</button>
+    </section>
+
+    <!-- Migration result panel -->
+    <section id="migration-panel" class="hidden">
+      <h2>3. Modernised Code</h2>
+      <div class="status-row">
+        <span>Migration Status: </span>
+        <span id="migration-status-badge" class="badge"></span>
+        <span id="framework-label" class="framework-tag"></span>
+      </div>
+      <pre id="modernized-code"></pre>
+      <div class="card full-width">
+        <h3>Migration Checklist</h3>
+        <ul id="migration-checklist"></ul>
+      </div>
+    </section>
+
+    <!-- Loading spinner -->
+    <div id="spinner" class="hidden">
+      <div class="spinner-ring"></div>
+      <p id="spinner-text">Analysing with GPT-4o...</p>
+    </div>
+
+    <!-- Error banner -->
+    <div id="error-banner" class="hidden error-banner"></div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
